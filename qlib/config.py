@@ -312,6 +312,7 @@ _default_region_config = {
         "trade_unit": 1,
         "limit_threshold": None,
         "deal_price": "close",
+        "provider_uri": "~/.qlib/qlib_data/crypto_data",
         "calendar_provider": {
             "class": "CalendarProvider",
             "module_path": "qlib.data.crypto.calendar",
