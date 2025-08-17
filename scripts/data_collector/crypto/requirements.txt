@@ -1,8 +1,7 @@
 loguru
 fire
-requests
+ccxt
 numpy
 pandas
 tqdm
 lxml
-pycoingecko

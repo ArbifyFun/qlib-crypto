@@ -1,96 +1,104 @@
-import abc
 import sys
-import datetime
-from abc import ABC
 from pathlib import Path
 
+import os
+
+import ccxt
 import fire
 import pandas as pd
 from loguru import logger
-from dateutil.tz import tzlocal
 
 CUR_DIR = Path(__file__).resolve().parent
 sys.path.append(str(CUR_DIR.parent.parent))
 from data_collector.base import BaseCollector, BaseNormalize, BaseRun
 from data_collector.utils import deco_retry
-
-from pycoingecko import CoinGeckoAPI
-from time import mktime
-from datetime import datetime as dt
-import time
-
-
-_CG_CRYPTO_SYMBOLS = None
+from qlib.data.storage.file_storage import (
+    FileCalendarStorage,
+    FileFeatureStorage,
+    FileInstrumentStorage,
+)
 
 
-def get_cg_crypto_symbols(qlib_data_path: [str, Path] = None) -> list:
-    """get crypto symbols in coingecko
+def dump_to_qlib(
+    normalize_dir: Path,
+    qlib_dir: Path,
+    freq: str,
+    date_field_name: str = "date",
+    symbol_field_name: str = "symbol",
+):
+    """Convert normalized csv data to Qlib format."""
 
-    Returns
-    -------
-        crypto symbols in given exchanges list of coingecko
-    """
-    global _CG_CRYPTO_SYMBOLS  # pylint: disable=W0603
+    normalize_dir = Path(normalize_dir).expanduser()
+    qlib_dir = Path(qlib_dir).expanduser()
 
-    @deco_retry
-    def _get_coingecko():
-        try:
-            cg = CoinGeckoAPI()
-            resp = pd.DataFrame(cg.get_coins_markets(vs_currency="usd"))
-        except Exception as e:
-            raise ValueError("request error") from e
-        try:
-            _symbols = resp["id"].to_list()
-        except Exception as e:
-            logger.warning(f"request error: {e}")
-            raise
-        return _symbols
+    # 创建 Qlib 所需的文件夹结构
+    for sub in ["calendars", "features", "instruments"]:
+        qlib_dir.joinpath(sub).mkdir(parents=True, exist_ok=True)
 
-    if _CG_CRYPTO_SYMBOLS is None:
-        _all_symbols = _get_coingecko()
+    provider_uri = {freq: str(qlib_dir)}
 
-        _CG_CRYPTO_SYMBOLS = sorted(set(_all_symbols))
+    file_list = sorted(normalize_dir.glob("*.csv"))
+    calendar_set = set()
+    inst_dict = {}
+    data_map = {}
+    for file_path in file_list:
+        df = pd.read_csv(file_path, parse_dates=[date_field_name])
+        symbol = file_path.stem
+        # 收集日历和标的信息
+        calendar_set.update(df[date_field_name])
+        inst_dict[symbol] = [(df[date_field_name].min(), df[date_field_name].max())]
+        data_map[symbol] = df
 
-    return _CG_CRYPTO_SYMBOLS
+    calendar_list = sorted(calendar_set)
+    fmt = "%Y-%m-%d" if freq == "1d" else "%Y-%m-%d %H:%M:%S"
+    cs = FileCalendarStorage(freq=freq, future=False, provider_uri=provider_uri)
+    cs.clear()
+    cs.extend([pd.Timestamp(d).strftime(fmt) for d in calendar_list])
+
+    # 写入交易所和股票信息
+    is_storage = FileInstrumentStorage(market="all", freq=freq, provider_uri=provider_uri)
+    is_storage.clear()
+    is_storage.update(inst_dict)
+
+    # 写入特征数据
+    for symbol, df in data_map.items():
+        for field in [c for c in df.columns if c not in [date_field_name, symbol_field_name]]:
+            fs = FileFeatureStorage(symbol, field, freq, provider_uri=provider_uri)
+            fs.clear()
+            fs.write(df[field].astype(float).values, index=0)
 
 
 class CryptoCollector(BaseCollector):
+    """使用 ccxt 从交易所抓取 OHLCV 数据."""
+
+    INTERVAL_1h = "1h"
+    # 将 Qlib 的频率映射到 ccxt 的 `timeframe` 参数
+    TIMEFRAME_MAP = {
+        BaseCollector.INTERVAL_1min: "1m",
+        INTERVAL_1h: "1h",
+        BaseCollector.INTERVAL_1d: "1d",
+    }
+
+    DEFAULT_START_DATETIME_1H = pd.Timestamp("2017-01-01")
+    DEFAULT_END_DATETIME_1H = BaseCollector.DEFAULT_END_DATETIME_1D
+
     def __init__(
         self,
         save_dir: [str, Path],
+        symbols: list = None,
         start=None,
         end=None,
         interval="1d",
+        exchange: str = "okx",
         max_workers=1,
         max_collector_count=2,
-        delay=1,  # delay need to be one
+        delay=1,
         check_data_length: int = None,
         limit_nums: int = None,
     ):
-        """
-
-        Parameters
-        ----------
-        save_dir: str
-            crypto save dir
-        max_workers: int
-            workers, default 4
-        max_collector_count: int
-            default 2
-        delay: float
-            time.sleep(delay), default 0
-        interval: str
-            freq, value from [1min, 1d], default 1min
-        start: str
-            start datetime, default None
-        end: str
-            end datetime, default None
-        check_data_length: int
-            check data length, if not None and greater than 0, each symbol will be considered complete if its data length is greater than or equal to this value, otherwise it will be fetched again, the maximum number of fetches being (max_collector_count). By default None.
-        limit_nums: int
-            using for debug, by default None
-        """
-        super(CryptoCollector, self).__init__(
+        self._symbols = symbols or []
+        self.exchange = exchange
+        super().__init__(
             save_dir=save_dir,
             start=start,
             end=end,
@@ -101,87 +109,59 @@ class CryptoCollector(BaseCollector):
             check_data_length=check_data_length,
             limit_nums=limit_nums,
         )
-
-        self.init_datetime()
-
-    def init_datetime(self):
-        if self.interval == self.INTERVAL_1min:
-            self.start_datetime = max(self.start_datetime, self.DEFAULT_START_DATETIME_1MIN)
-        elif self.interval == self.INTERVAL_1d:
-            pass
-        else:
+        if self.interval not in self.TIMEFRAME_MAP:
             raise ValueError(f"interval error: {self.interval}")
 
-        self.start_datetime = self.convert_datetime(self.start_datetime, self._timezone)
-        self.end_datetime = self.convert_datetime(self.end_datetime, self._timezone)
+        api_key = os.getenv("OKX_API_KEY")
+        secret = os.getenv("OKX_API_SECRET")
+        password = os.getenv("OKX_API_PASSPHRASE")
+        exchange_cls = getattr(ccxt, self.exchange)
+        self._client = exchange_cls(
+            {
+                "apiKey": api_key,
+                "secret": secret,
+                "password": password,
+                "enableRateLimit": True,
+            }
+        )
 
-    @staticmethod
-    def convert_datetime(dt: [pd.Timestamp, datetime.date, str], timezone):
-        try:
-            dt = pd.Timestamp(dt, tz=timezone).timestamp()
-            dt = pd.Timestamp(dt, tz=tzlocal(), unit="s")
-        except ValueError as e:
-            pass
-        return dt
+    def get_instrument_list(self):
+        return self._symbols
 
-    @property
-    @abc.abstractmethod
-    def _timezone(self):
-        raise NotImplementedError("rewrite get_timezone")
+    def normalize_symbol(self, symbol):
+        return symbol.replace("/", "_").replace("-", "_")
 
-    @staticmethod
-    def get_data_from_remote(symbol, interval, start, end):
+    @deco_retry
+    def get_data_from_remote(self, symbol, interval, start, end):
+        """通过 ccxt 的 `fetch_ohlcv` 接口获取数据"""
         error_msg = f"{symbol}-{interval}-{start}-{end}"
-        try:
-            cg = CoinGeckoAPI()
-            data = cg.get_coin_market_chart_by_id(id=symbol, vs_currency="usd", days="max")
-            _resp = pd.DataFrame(columns=["date"] + list(data.keys()))
-            _resp["date"] = [dt.fromtimestamp(mktime(time.localtime(x[0] / 1000))) for x in data["prices"]]
-            for key in data.keys():
-                _resp[key] = [x[1] for x in data[key]]
-            _resp["date"] = pd.to_datetime(_resp["date"])
-            _resp["date"] = [x.date() for x in _resp["date"]]
-            _resp = _resp[(_resp["date"] < pd.to_datetime(end).date()) & (_resp["date"] > pd.to_datetime(start).date())]
-            if _resp.shape[0] != 0:
-                _resp = _resp.reset_index()
-            if isinstance(_resp, pd.DataFrame):
-                return _resp.reset_index()
-        except Exception as e:
-            logger.warning(f"{error_msg}:{e}")
+        timeframe = self.TIMEFRAME_MAP[interval]
+        since = int(pd.Timestamp(start, tz="UTC").timestamp() * 1000)
+        end_ts = int(pd.Timestamp(end, tz="UTC").timestamp() * 1000)
+        all_data = []
+        while since <= end_ts:
+            try:
+                ohlcvs = self._client.fetch_ohlcv(
+                    symbol.replace("_", "/"), timeframe=timeframe, since=since, limit=1000
+                )
+            except Exception as e:  # pragma: no cover - 网络异常不计入覆盖率
+                logger.warning(f"{error_msg}: {e}")
+                break
+            if not ohlcvs:
+                break
+            all_data.extend(ohlcvs)
+            since = ohlcvs[-1][0] + self._client.parse_timeframe(timeframe) * 1000
+            self.sleep()
+        df = pd.DataFrame(all_data, columns=["ts", "open", "high", "low", "close", "volume"])
+        df["date"] = pd.to_datetime(df["ts"], unit="ms")
+        df = df[(df["date"] >= pd.Timestamp(start)) & (df["date"] <= pd.Timestamp(end))]
+        df.sort_values("date", inplace=True)
+        return df[["date", "open", "high", "low", "close", "volume"]]
 
     def get_data(
         self, symbol: str, interval: str, start_datetime: pd.Timestamp, end_datetime: pd.Timestamp
-    ) -> [pd.DataFrame]:
-        def _get_simple(start_, end_):
-            self.sleep()
-            _remote_interval = interval
-            return self.get_data_from_remote(
-                symbol,
-                interval=_remote_interval,
-                start=start_,
-                end=end_,
-            )
-
-        if interval == self.INTERVAL_1d:
-            _result = _get_simple(start_datetime, end_datetime)
-        else:
-            raise ValueError(f"cannot support {interval}")
-        return _result
-
-
-class CryptoCollector1d(CryptoCollector, ABC):
-    def get_instrument_list(self):
-        logger.info("get coingecko crypto symbols......")
-        symbols = get_cg_crypto_symbols()
-        logger.info(f"get {len(symbols)} symbols.")
-        return symbols
-
-    def normalize_symbol(self, symbol):
-        return symbol
-
-    @property
-    def _timezone(self):
-        return "Asia/Shanghai"
+    ) -> pd.DataFrame:
+        return self.get_data_from_remote(symbol, interval, start_datetime, end_datetime)
 
 
 class CryptoNormalize(BaseNormalize):
@@ -197,26 +177,18 @@ class CryptoNormalize(BaseNormalize):
         if df.empty:
             return df
         df = df.copy()
+        # 将日期列设置为索引，并确保索引唯一有序
         df.set_index(date_field_name, inplace=True)
         df.index = pd.to_datetime(df.index)
         df = df[~df.index.duplicated(keep="first")]
         if calendar_list is not None:
-            df = df.reindex(
-                pd.DataFrame(index=calendar_list)
-                .loc[
-                    pd.Timestamp(df.index.min()).date() : pd.Timestamp(df.index.max()).date()
-                    + pd.Timedelta(hours=23, minutes=59)
-                ]
-                .index
-            )
+            df = df.reindex(pd.DataFrame(index=calendar_list).loc[df.index.min() : df.index.max()].index)
         df.sort_index(inplace=True)
-
         df.index.names = [date_field_name]
         return df.reset_index()
 
     def normalize(self, df: pd.DataFrame) -> pd.DataFrame:
-        df = self.normalize_crypto(df, self._calendar_list, self._date_field_name, self._symbol_field_name)
-        return df
+        return self.normalize_crypto(df, self._calendar_list, self._date_field_name, self._symbol_field_name)
 
 
 class CryptoNormalize1d(CryptoNormalize):
@@ -224,26 +196,21 @@ class CryptoNormalize1d(CryptoNormalize):
         return None
 
 
+class CryptoNormalize1h(CryptoNormalize1d):
+    pass
+
+
+class CryptoNormalize1min(CryptoNormalize1d):
+    pass
+
+
 class Run(BaseRun):
     def __init__(self, source_dir=None, normalize_dir=None, max_workers=1, interval="1d"):
-        """
-
-        Parameters
-        ----------
-        source_dir: str
-            The directory where the raw data collected from the Internet is saved, default "Path(__file__).parent/source"
-        normalize_dir: str
-            Directory for normalize data, default "Path(__file__).parent/normalize"
-        max_workers: int
-            Concurrent number, default is 1
-        interval: str
-            freq, value from [1min, 1d], default 1d
-        """
         super().__init__(source_dir, normalize_dir, max_workers, interval)
 
     @property
     def collector_class_name(self):
-        return f"CryptoCollector{self.interval}"
+        return f"CryptoCollector"
 
     @property
     def normalize_class_name(self):
@@ -256,54 +223,31 @@ class Run(BaseRun):
     def download_data(
         self,
         max_collector_count=2,
-        delay=0,
+        delay=1,
         start=None,
         end=None,
         check_data_length: int = None,
         limit_nums=None,
+        symbols: list = None,
     ):
-        """download data from Internet
-
-        Parameters
-        ----------
-        max_collector_count: int
-            default 2
-        delay: float
-            time.sleep(delay), default 0
-        interval: str
-            freq, value from [1min, 1d], default 1d, currently only supprot 1d
-        start: str
-            start datetime, default "2000-01-01"
-        end: str
-            end datetime, default ``pd.Timestamp(datetime.datetime.now() + pd.Timedelta(days=1))``
-        check_data_length: int # if this param useful?
-            check data length, if not None and greater than 0, each symbol will be considered complete if its data length is greater than or equal to this value, otherwise it will be fetched again, the maximum number of fetches being (max_collector_count). By default None.
-        limit_nums: int
-            using for debug, by default None
-
-        Examples
-        ---------
-            # get daily data
-            $ python collector.py download_data --source_dir ~/.qlib/crypto_data/source/1d --start 2015-01-01 --end 2021-11-30 --delay 1 --interval 1d
-        """
-
-        super(Run, self).download_data(max_collector_count, delay, start, end, check_data_length, limit_nums)
+        # 默认延迟 1 秒，配合 ccxt 的限流机制
+        super(Run, self).download_data(
+            max_collector_count,
+            delay,
+            start,
+            end,
+            check_data_length,
+            limit_nums,
+            symbols=symbols,
+        )
 
     def normalize_data(self, date_field_name: str = "date", symbol_field_name: str = "symbol"):
-        """normalize data
-
-        Parameters
-        ----------
-        date_field_name: str
-            date field name, default date
-        symbol_field_name: str
-            symbol field name, default symbol
-
-        Examples
-        ---------
-            $ python collector.py normalize_data --source_dir ~/.qlib/crypto_data/source/1d --normalize_dir ~/.qlib/crypto_data/source/1d_nor --interval 1d --date_field_name date
-        """
+        # 调用父类方法完成数据规范化
         super(Run, self).normalize_data(date_field_name, symbol_field_name)
+
+    def dump_to_qlib(self, qlib_dir, date_field_name: str = "date", symbol_field_name: str = "symbol"):
+        # 将规范化后的数据写入 Qlib 目录
+        dump_to_qlib(self.normalize_dir, qlib_dir, self.interval, date_field_name, symbol_field_name)
 
 
 if __name__ == "__main__":
