@@ -26,6 +26,8 @@ from .data import (
     ClientProvider,
 )
 
+from .crypto import CryptoInstrumentProvider
+
 from .cache import (
     ExpressionCache,
     DatasetCache,
@@ -46,6 +48,7 @@ __all__ = [
     "DatasetProvider",
     "LocalCalendarProvider",
     "LocalInstrumentProvider",
+    "CryptoInstrumentProvider",
     "LocalFeatureProvider",
     "LocalPITProvider",
     "LocalExpressionProvider",
