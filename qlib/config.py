@@ -462,7 +462,12 @@ class QlibConfig(Config):
         logger.info(f"default_conf: {default_conf}.")
 
         self.set_mode(default_conf)
-        self.set_region(kwargs.get("region", self["region"] if "region" in self else REG_CN))
+        region = kwargs.get("region", self["region"] if "region" in self else REG_CN)
+        self.set_region(region)
+        if region == REG_CRYPTO:
+            from qlib.contrib.data.crypto_provider import CryptoProvider
+
+            self["provider"] = CryptoProvider
 
         for k, v in kwargs.items():
             if k not in self:
