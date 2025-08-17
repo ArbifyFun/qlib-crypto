@@ -313,6 +313,10 @@ _default_region_config = {
         "limit_threshold": None,
         "deal_price": "close",
         "provider_uri": "~/.qlib/qlib_data/crypto_data",
+        "calendar_provider": {
+            "class": "CalendarProvider",
+            "module_path": "qlib.data.crypto.calendar",
+        },
     },
 }
 
@@ -436,7 +440,7 @@ class QlibConfig(Config):
         However, sometimes it is hard for users to set the config when the configuration is nested and complicated
 
         So this API provides some special parameters for users to set the keys in a more convenient way.
-        - region:  REG_CN, REG_US
+        - region:  REG_CN, REG_US, REG_TW, REG_CRYPTO
             - several region-related config will be changed
 
         Parameters
