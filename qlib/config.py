@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Callable, Optional, Union
 from typing import TYPE_CHECKING
 
-from qlib.constant import REG_CN, REG_US, REG_TW
+from qlib.constant import REG_CN, REG_US, REG_TW, REG_CRYPTO
 
 if TYPE_CHECKING:
     from qlib.utils.time import Freq
@@ -308,6 +308,11 @@ _default_region_config = {
         "limit_threshold": 0.1,
         "deal_price": "close",
     },
+    REG_CRYPTO: {
+        "trade_unit": 1,
+        "limit_threshold": None,
+        "deal_price": "close",
+    },
 }
 
 
@@ -452,7 +457,12 @@ class QlibConfig(Config):
         logger.info(f"default_conf: {default_conf}.")
 
         self.set_mode(default_conf)
-        self.set_region(kwargs.get("region", self["region"] if "region" in self else REG_CN))
+        region = kwargs.get("region", self["region"] if "region" in self else REG_CN)
+        self.set_region(region)
+        if region == REG_CRYPTO:
+            from qlib.contrib.data.crypto_provider import CryptoProvider
+
+            self["provider"] = CryptoProvider
 
         for k, v in kwargs.items():
             if k not in self:
