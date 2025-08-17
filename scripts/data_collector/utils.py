@@ -16,11 +16,15 @@ from typing import Iterable, Tuple, List
 import numpy as np
 import pandas as pd
 from loguru import logger
-from yahooquery import Ticker
 from tqdm import tqdm
 from functools import partial
 from concurrent.futures import ProcessPoolExecutor
 from bs4 import BeautifulSoup
+
+try:  # 对于只需要重试装饰器的场景，可不安装 yahooquery
+    from yahooquery import Ticker
+except Exception:  # pragma: no cover - optional dependency
+    Ticker = None
 
 HS_SYMBOLS_URL = "http://app.finance.ifeng.com/hq/list.php?type=stock_a&class={s_type}"
 
@@ -74,6 +78,8 @@ def get_calendar_list(bench_code="CSI300") -> List[pd.Timestamp]:
     calendar = _CALENDAR_MAP.get(bench_code, None)
     if calendar is None:
         if bench_code.startswith("US_") or bench_code.startswith("IN_") or bench_code.startswith("BR_"):
+            if Ticker is None:
+                raise ImportError("yahooquery is required for US/IN/BR calendar fetching")
             print(Ticker(CALENDAR_BENCH_URL_MAP[bench_code]))
             print(Ticker(CALENDAR_BENCH_URL_MAP[bench_code]).history(interval="1d", period="max"))
             df = Ticker(CALENDAR_BENCH_URL_MAP[bench_code]).history(interval="1d", period="max")
