@@ -141,6 +141,15 @@ Your feedbacks about the features are very important.
 <!-- | Feature                        | Status      | -->
 <!-- | --                      | ------    | -->
 
+# Crypto 支持
+
+Qlib-crypto adds experimental support for cryptocurrency research.
+
+- 文档: [crypto/overview](docs/crypto/overview.rst)
+- 示例: [scripts/data_collector/crypto](scripts/data_collector/crypto/README.md)
+
+需要额外安装如 `ccxt` 等 API 依赖。示例数据来自公开接口（如 Coingecko），仅供研究参考，数据质量与稳定性无法保证。
+
 # Framework of Qlib
 
 <div style="align: center">
