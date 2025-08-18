@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 
 import numpy as np
 import pandas as pd
@@ -73,8 +73,9 @@ class CryptoExchange(Exchange):
         order: Order,
         trade_account=None,
         position=None,
-        dealt_order_amount: Dict[str, float] = defaultdict(float),
+        dealt_order_amount: Optional[Dict[str, float]] = None,
     ) -> Tuple[float, float, float]:
+        dealt_order_amount = dealt_order_amount or defaultdict(float)
         if not self.check_order(order):
             order.deal_amount = 0.0
             return 0.0, 0.0, np.nan
