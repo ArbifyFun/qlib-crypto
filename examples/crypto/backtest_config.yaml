@@ -1,0 +1,35 @@
+# Template configuration for cryptocurrency backtesting
+# This file serves as an example on how to configure the crypto exchange
+# and executor for 24/7 markets.
+
+qlib_init:
+  provider_uri: "~/.qlib/crypto_data"
+  region: "custom"
+
+exchange:
+  class: "CryptoExchange"
+  module_path: "qlib.backtest.crypto_exchange"
+  kwargs:
+    freq: "1min"
+    fee_model:
+      class: "PercentageFeeModel"
+      kwargs:
+        rate: 0.001
+    slippage_model:
+      class: "LinearSlippageModel"
+      kwargs:
+        rate: 0.0005
+
+executor:
+  class: "SimulatorExecutor"
+  module_path: "qlib.backtest.executor"
+  kwargs:
+    time_per_step: "1min"
+
+# A simple strategy placeholder
+strategy:
+  class: "TopkStrategy"
+  module_path: "qlib.contrib.strategy.rule_strategy"
+  kwargs:
+    topk: 10
+    sort: "ascend"
