@@ -423,7 +423,7 @@ class Exchange:
         order: Order,
         trade_account: Account | None = None,
         position: BasePosition | None = None,
-        dealt_order_amount: Dict[str, float] = defaultdict(float),
+        dealt_order_amount: Optional[Dict[str, float]] = None,
     ) -> Tuple[float, float, float]:
         """
         Deal order when the actual transaction
@@ -434,6 +434,7 @@ class Exchange:
         :param dealt_order_amount: the dealt order amount dict with the format of {stock_id: float}
         :return: trade_val, trade_cost, trade_price
         """
+        dealt_order_amount = dealt_order_amount or defaultdict(float)
         # check order first.
         if not self.check_order(order):
             order.deal_amount = 0.0
