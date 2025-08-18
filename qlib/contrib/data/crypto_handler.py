@@ -6,6 +6,10 @@
 This handler provides a simple default feature set for cryptocurrency
 market data. It supports both daily and intraday frequencies and assumes
 24/7 trading calendars.
+
+Note
+----
+Previously this class was exposed as ``CryptoHandler``.
 """
 
 from qlib.contrib.data.handler import (
@@ -16,7 +20,7 @@ from qlib.contrib.data.handler import (
 )
 
 
-class CryptoHandler(BaseHandler):
+class CryptoDatasetHandler(BaseHandler):
     """Default crypto data handler.
 
     Parameters

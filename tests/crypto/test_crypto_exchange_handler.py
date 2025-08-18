@@ -28,7 +28,7 @@ from qlib.backtest.crypto_exchange import (
     LinearSlippageModel,
 )
 from qlib.backtest.decision import Order
-from qlib.contrib.data.crypto_handler import CryptoHandler
+from qlib.contrib.data import CryptoDatasetHandler
 from qlib.data.dataset.handler import DataHandlerLP
 from qlib.config import C
 from qlib.constant import REG_CRYPTO
@@ -99,8 +99,8 @@ def test_crypto_exchange_fee_slippage(sample_ohlcv):
     assert trade_cost == pytest.approx(120 * 0.99 * 0.001)
 
 
-def test_crypto_handler_features_labels(sample_ohlcv):
-    handler_proto = CryptoHandler.__new__(CryptoHandler)
+def test_crypto_dataset_handler_features_labels(sample_ohlcv):
+    handler_proto = CryptoDatasetHandler.__new__(CryptoDatasetHandler)
     _feat_expr, feat_names = handler_proto.get_feature_config()
     _label_expr, label_names = handler_proto.get_label_config()
     assert feat_names == ["RET", "VOLUME"]

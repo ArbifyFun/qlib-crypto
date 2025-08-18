@@ -21,7 +21,7 @@ if __name__ == "__main__":
         "kwargs": {
             "handler": {
                 "class": "CryptoDatasetHandler",
-                "module_path": "qlib.contrib.data.handler",
+                "module_path": "qlib.contrib.data",
                 "kwargs": {
                     "instruments": "BTC",
                     "start_time": "2020-01-01",

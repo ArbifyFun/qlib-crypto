@@ -1,3 +1,3 @@
-from .crypto_provider import CryptoProvider
+from .crypto_handler import CryptoDatasetHandler
 
-__all__ = ["CryptoProvider"]
+__all__ = ["CryptoDatasetHandler"]
