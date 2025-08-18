@@ -317,6 +317,10 @@ _default_region_config = {
             "class": "CalendarProvider",
             "module_path": "qlib.data.crypto.calendar",
         },
+        "instrument_provider": {
+            "class": "CryptoInstrumentProvider",
+            "module_path": "qlib.data.crypto",
+        },
     },
 }
 
@@ -468,6 +472,10 @@ class QlibConfig(Config):
             from qlib.contrib.data.crypto_provider import CryptoProvider
 
             self["provider"] = CryptoProvider
+            self["instrument_provider"] = {
+                "class": "CryptoInstrumentProvider",
+                "module_path": "qlib.data.crypto",
+            }
 
         for k, v in kwargs.items():
             if k not in self:
