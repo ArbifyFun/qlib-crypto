@@ -320,6 +320,9 @@ _default_region_config = {
         "instrument_provider": {
             "class": "CryptoInstrumentProvider",
             "module_path": "qlib.data.crypto",
+            "kwargs": {
+                "source": "~/.qlib/qlib_data/crypto_data/instruments.json",
+            },
         },
     },
 }
@@ -475,6 +478,9 @@ class QlibConfig(Config):
             self["instrument_provider"] = {
                 "class": "CryptoInstrumentProvider",
                 "module_path": "qlib.data.crypto",
+                "kwargs": {
+                    "source": "~/.qlib/qlib_data/crypto_data/instruments.json",
+                },
             }
 
         for k, v in kwargs.items():

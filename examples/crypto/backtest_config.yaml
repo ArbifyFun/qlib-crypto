@@ -3,9 +3,11 @@
 # Usage:
 #   1. Prepare an OHLCV dataset (e.g., with ``scripts/data_collector/crypto``
 #      which fetches data from the OKX API via ``ccxt``) and store it at the
-#      path specified by ``qlib_init.provider_uri`` (default: ``~/.qlib/crypto_data``).
-#      The data must contain open, high, low, close and volume fields at the
-#      desired frequency.
+#      path specified by ``qlib_init.provider_uri`` (default:
+#      ``~/.qlib/qlib_data/crypto_data``).  The file
+#      ``instruments.json`` under this directory lists the tradable
+#      symbols used by ``CryptoInstrumentProvider``.  The data must contain
+#      open, high, low, close and volume fields at the desired frequency.
 #   2. Run your workflow or scripts with this configuration. For example:
 #      ``python examples/crypto/workflow.py --config examples/crypto/backtest_config.yaml``
 #      or load it via ``qlib.backtest`` APIs.
@@ -16,8 +18,11 @@
 #     quality before relying on the results.
 
 qlib_init:
-  provider_uri: "~/.qlib/crypto_data"
+  provider_uri: "~/.qlib/qlib_data/crypto_data"
   region: "custom"
+  instrument_provider:
+    kwargs:
+      source: "~/.qlib/qlib_data/crypto_data/instruments.json"
 
 exchange:
   class: "CryptoExchange"

@@ -12,6 +12,14 @@ Backtesting
 * OHLC data is now supported, enabling backtests through Qlib's workflow.
 * Use ``CryptoExchange`` with ``SimulatorExecutor`` or the template in ``examples/crypto/backtest_config.yaml`` to evaluate strategies on 24/7 markets.
 
+Instrument List
+---------------
+``CryptoInstrumentProvider`` requires a list of tradable symbols.  By default,
+this list is loaded from
+``~/.qlib/qlib_data/crypto_data/instruments.json``.  You can override the
+location by passing ``instrument_provider={'kwargs': {'source': 'PATH'}}`` to
+``qlib.init``.
+
 Installation
 ------------
 1. Install Qlib (``pip install pyqlib``).

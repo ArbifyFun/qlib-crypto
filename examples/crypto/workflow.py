@@ -6,7 +6,14 @@ from qlib.workflow.record_temp import SignalRecord, SigAnaRecord, PortAnaRecord
 
 if __name__ == "__main__":
     # initialize qlib with crypto region
-    qlib.init(region="crypto")
+    # The instrument provider loads tradable symbols from the given source.
+    # ``~/.qlib/qlib_data/crypto_data/instruments.json`` is used by default.
+    qlib.init(
+        region="crypto",
+        instrument_provider={
+            "kwargs": {"source": "~/.qlib/qlib_data/crypto_data/instruments.json"}
+        },
+    )
 
     # model config
     model_config = {
