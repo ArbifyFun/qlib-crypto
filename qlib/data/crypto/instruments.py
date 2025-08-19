@@ -35,7 +35,9 @@ class CryptoInstrumentProvider(InstrumentProvider):
 
     def __init__(self, source: str, min_volume: float = 0.0) -> None:
         super().__init__()
-        self.source = source
+        # Expand ``~`` in user paths to allow default configuration using
+        # ``~/.qlib`` locations.
+        self.source = str(Path(source).expanduser())
         self.min_volume = min_volume
 
     # ---------------------------------------------------------------------
