@@ -45,6 +45,13 @@ class IncrementalUpdater:
         step = pd.Timedelta(days=1) if self.interval == "1d" else pd.Timedelta(minutes=1)
         return pd.Timestamp(last_dt) + step
 
+    @staticmethod
+    def _normalize_ts(ts: pd.Timestamp) -> pd.Timestamp:
+        ts = pd.Timestamp(ts)
+        if ts.tz is not None:
+            return ts.tz_convert("UTC").tz_localize(None)
+        return ts
+
     def update(self, end: Optional[str] = None, limit_nums: Optional[int] = None):
         files = sorted(self.source_dir.glob("*.csv"))
         if limit_nums is not None:
@@ -53,7 +60,7 @@ class IncrementalUpdater:
             return 0
 
         collector = self._new_collector()
-        end_ts = pd.Timestamp(end) if end is not None else pd.Timestamp.utcnow()
+        end_ts = self._normalize_ts(pd.Timestamp(end) if end is not None else pd.Timestamp.utcnow())
         updated = 0
 
         for fp in files:
@@ -62,7 +69,7 @@ class IncrementalUpdater:
                 continue
             qlib_symbol = str(old_df["symbol"].iloc[0])
             raw_symbol = _to_exchange_symbol(self.exchange, qlib_symbol)
-            start_ts = self._infer_start(old_df)
+            start_ts = self._normalize_ts(self._infer_start(old_df))
             if start_ts >= end_ts:
                 continue
             new_df = collector.get_data(raw_symbol, self.interval, start_ts, end_ts)
