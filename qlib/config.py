@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Callable, Optional, Union
 from typing import TYPE_CHECKING
 
-from qlib.constant import REG_CN, REG_US, REG_TW
+from qlib.constant import REG_CN, REG_CRYPTO, REG_US, REG_TW
 
 if TYPE_CHECKING:
     from qlib.utils.time import Freq
@@ -308,6 +308,11 @@ _default_region_config = {
         "limit_threshold": 0.1,
         "deal_price": "close",
     },
+    REG_CRYPTO: {
+        "trade_unit": None,
+        "limit_threshold": None,
+        "deal_price": "close",
+    },
 }
 
 
@@ -430,7 +435,7 @@ class QlibConfig(Config):
         However, sometimes it is hard for users to set the config when the configuration is nested and complicated
 
         So this API provides some special parameters for users to set the keys in a more convenient way.
-        - region:  REG_CN, REG_US
+        - region:  REG_CN, REG_US, REG_TW, REG_CRYPTO
             - several region-related config will be changed
 
         Parameters

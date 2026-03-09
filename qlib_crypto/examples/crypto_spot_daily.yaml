@@ -1,0 +1,28 @@
+qlib_init:
+  provider_uri: ~/.qlib/crypto_data
+  region: crypto
+  custom_ops:
+    - class: FundingZScore
+      module_path: qlib_crypto.contrib.ops.crypto_ops
+    - class: BasisPct
+      module_path: qlib_crypto.contrib.ops.crypto_ops
+    - class: OIRatio
+      module_path: qlib_crypto.contrib.ops.crypto_ops
+
+dataset:
+  class: DatasetH
+  module_path: qlib.data.dataset
+  kwargs:
+    handler:
+      class: Alpha158Crypto
+      module_path: qlib_crypto.contrib.data.handler
+      kwargs:
+        instruments: all
+        start_time: 2020-01-01
+        end_time: 2024-12-31
+        fit_start_time: 2020-01-01
+        fit_end_time: 2022-12-31
+    segments:
+      train: [2020-01-01, 2022-12-31]
+      valid: [2023-01-01, 2023-12-31]
+      test: [2024-01-01, 2024-12-31]

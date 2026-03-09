@@ -1,0 +1,4 @@
+requests
+pandas
+fire
+loguru

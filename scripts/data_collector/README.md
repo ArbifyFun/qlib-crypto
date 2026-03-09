@@ -8,6 +8,8 @@ Scripts for data collection
 - fund: get fund data from *http://fund.eastmoney.com*
 - cn_index: get *CN index* from *http://www.csindex.com.cn*, *CSI300*/*CSI100*
 - us_index: get *US index* from *https://en.wikipedia.org/wiki*, *SP500*/*NASDAQ100*/*DJIA*/*SP400*
+- crypto: existing CoinGecko daily market-cap/volume retrieval (data retrieval only)
+- crypto_ohlcv: stage-1 OHLCV collector scaffold for backtest-ready crypto datasets
 - contrib: scripts for some auxiliary functions
 
 
