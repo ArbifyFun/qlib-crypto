@@ -41,8 +41,8 @@ class IncrementalUpdater:
         )
 
     def _infer_start(self, df: pd.DataFrame) -> pd.Timestamp:
-        date_series = pd.to_datetime(df["date"], utc=True)
-        last_dt = date_series.max().tz_localize(None)
+        date_series = pd.to_datetime(df["date"], utc=True, format="mixed")
+        last_dt = self._normalize_ts(date_series.max())
         step = pd.Timedelta(days=1) if self.interval == "1d" else pd.Timedelta(minutes=1)
         return pd.Timestamp(last_dt) + step
 
@@ -70,7 +70,7 @@ class IncrementalUpdater:
                 continue
             qlib_symbol = str(old_df["symbol"].iloc[0])
             raw_symbol = _to_exchange_symbol(self.exchange, qlib_symbol)
-            start_ts = self._infer_start(old_df)
+            start_ts = self._normalize_ts(self._infer_start(old_df))
             if start_ts >= end_ts:
                 continue
             new_df = collector.get_data(raw_symbol, self.interval, start_ts, end_ts)
