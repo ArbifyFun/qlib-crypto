@@ -81,7 +81,8 @@ class IncrementalUpdater:
             new_df = new_df.copy()
             new_df["symbol"] = qlib_symbol
             merged = pd.concat([old_df, new_df], sort=False, ignore_index=True)
-            merged["date"] = pd.to_datetime(merged["date"], utc=True, format="mixed").dt.tz_localize(None)
+            parsed_dates = merged["date"].map(lambda v: pd.to_datetime(v, utc=True))
+            merged["date"] = pd.DatetimeIndex(parsed_dates).tz_localize(None)
             merged = merged.drop_duplicates(subset=["date"], keep="last").sort_values("date")
             merged.to_csv(fp, index=False)
             updated += 1
