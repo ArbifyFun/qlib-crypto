@@ -78,3 +78,57 @@ def test_binance_pagination_logic():
     frame = c.get_data("BTCUSDT", "1d", pd.Timestamp("2024-01-01"), pd.Timestamp("2024-01-10"))
     assert c.calls >= 2
     assert not frame.empty
+
+
+def test_binance_vwap_handles_zero_volume():
+    class DummyCollector(CryptoCollector):
+        def _get_binance_instruments(self):
+            return ["BTCUSDT"]
+
+        def _request_json(self, url, params=None):
+            if "exchangeInfo" in url:
+                return {"symbols": []}
+            return []
+
+    collector = DummyCollector(
+        save_dir="/tmp/crypto_test",
+        interval="1d",
+        exchange="binance",
+        quote_asset="USDT",
+        limit_nums=1,
+    )
+    raw_data = [
+        [1704067200000, "1", "2", "0.5", "1.5", "0", 1704153599000, "10", "1", "0", "0", "0"],
+        [1704153600000, "2", "3", "1", "2.5", "5", 1704239999000, "15", "1", "0", "0", "0"],
+    ]
+
+    frame = collector._to_contract_frame_binance("BTCUSDT", raw_data)
+
+    assert pd.isna(frame.loc[0, "vwap"])
+    assert frame.loc[1, "vwap"] == 3.0
+
+
+def test_okx_vwap_handles_zero_volume():
+    class DummyCollector(CryptoCollector):
+        def _get_okx_instruments(self):
+            return ["BTC-USDT"]
+
+        def _request_json(self, url, params=None):
+            return {"data": []}
+
+    collector = DummyCollector(
+        save_dir="/tmp/crypto_test",
+        interval="1d",
+        exchange="okx",
+        quote_asset="USDT",
+        limit_nums=1,
+    )
+    raw_data = [
+        ["1704067200000", "1", "2", "0.5", "1.5", "0", "0", "10", "1"],
+        ["1704153600000", "2", "3", "1", "2.5", "5", "0", "15", "1"],
+    ]
+
+    frame = collector._to_contract_frame_okx("BTC-USDT", raw_data)
+
+    assert pd.isna(frame.loc[0, "vwap"])
+    assert frame.loc[1, "vwap"] == 3.0

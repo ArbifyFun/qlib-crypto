@@ -18,14 +18,14 @@ def test_symbol_registry_roundtrip():
 
 
 def test_pipeline_invokes_builder_and_dump(monkeypatch, tmp_path: Path):
-    calls = {"builder": 0, "dump": 0}
+    calls = {"builder": 0, "dump": 0, "dump_kwargs": None}
 
     def fake_builder(**kwargs):
         calls["builder"] += 1
 
     class FakeDump:
         def __init__(self, **kwargs):
-            self.kwargs = kwargs
+            calls["dump_kwargs"] = kwargs
 
         def dump(self):
             calls["dump"] += 1
@@ -41,3 +41,4 @@ def test_pipeline_invokes_builder_and_dump(monkeypatch, tmp_path: Path):
 
     assert calls["builder"] == 1
     assert calls["dump"] == 1
+    assert calls["dump_kwargs"]["exclude_fields"] == "symbol,exchange"
