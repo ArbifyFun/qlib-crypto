@@ -41,8 +41,8 @@ class IncrementalUpdater:
         )
 
     def _infer_start(self, df: pd.DataFrame) -> pd.Timestamp:
-        date_series = pd.to_datetime(df["date"], utc=True)
-        last_dt = date_series.max().tz_localize(None)
+        date_series = self._parse_date_series(df["date"])
+        last_dt = date_series.max()
         step = pd.Timedelta(days=1) if self.interval == "1d" else pd.Timedelta(minutes=1)
         return pd.Timestamp(last_dt) + step
 
@@ -52,6 +52,11 @@ class IncrementalUpdater:
         if ts.tz is not None:
             return ts.tz_convert("UTC").tz_localize(None)
         return ts
+
+    @classmethod
+    def _parse_date_series(cls, date_series: pd.Series) -> pd.Series:
+        parsed = date_series.map(pd.Timestamp)
+        return parsed.map(cls._normalize_ts)
 
     def update(self, end: Optional[str] = None, limit_nums: Optional[int] = None):
         files = sorted(self.source_dir.glob("*.csv"))
@@ -81,7 +86,7 @@ class IncrementalUpdater:
             new_df = new_df.copy()
             new_df["symbol"] = qlib_symbol
             merged = pd.concat([old_df, new_df], sort=False, ignore_index=True)
-            merged["date"] = pd.to_datetime(merged["date"], utc=True, format="mixed").dt.tz_localize(None)
+            merged["date"] = self._parse_date_series(merged["date"])
             merged = merged.drop_duplicates(subset=["date"], keep="last").sort_values("date")
             merged.to_csv(fp, index=False)
             updated += 1
