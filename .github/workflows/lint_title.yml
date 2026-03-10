@@ -32,4 +32,9 @@ jobs:
         env:
           BODY: ${{ github.event.pull_request.title }}
         run: |
+          echo "PR title: $BODY"
+          if ! echo "$BODY" | grep -Eq '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test|Release-As)(\([[:alnum:]_.-]+\))?: .+'; then
+            echo "::error::PR title must follow conventional commits, e.g. 'fix: align incremental updater timezone handling'"
+            exit 1
+          fi
           echo "$BODY" | npx commitlint --config .commitlintrc.js
