@@ -157,6 +157,18 @@ class CryptoMetaCollector:
         valid = [f for f in frames if f is not None and not f.empty]
         if not valid:
             return pd.DataFrame(columns=self.META_COLUMNS)
-        df = pd.concat(valid, ignore_index=True, sort=False)
-        df = df.sort_values(["symbol", "date"]).drop_duplicates(["symbol", "date"], keep="last")
-        return df[self.META_COLUMNS]
+        df = pd.concat(valid, ignore_index=True, sort=False).sort_values(["symbol", "date"]) 
+
+        def _last_non_null(s: pd.Series):
+            non_null = s.dropna()
+            if non_null.empty:
+                return pd.NA
+            return non_null.iloc[-1]
+
+        agg_map = {col: _last_non_null for col in self.META_COLUMNS if col not in {"symbol", "date"}}
+        merged = (
+            df.groupby(["symbol", "date"], as_index=False, sort=True)
+            .agg(agg_map)
+            .reindex(columns=self.META_COLUMNS)
+        )
+        return merged

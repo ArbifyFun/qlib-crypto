@@ -66,3 +66,44 @@ def test_merge_spot_and_meta():
     merged = merge_spot_and_meta(spot, meta)
     assert "funding_rate" in merged.columns
     assert merged.loc[0, "funding_rate"] == 0.0001
+
+
+def test_merge_meta_frames_preserves_complementary_fields():
+    collector = CryptoMetaCollector()
+    dt = pd.Timestamp("2024-01-01")
+
+    funding = pd.DataFrame(
+        {
+            "date": [dt],
+            "symbol": ["BINANCE_BTCUSDT"],
+            "exchange": ["BINANCE"],
+            "funding_rate": [0.0002],
+            "open_interest": [pd.NA],
+            "mark_price": [42000.0],
+            "index_price": [pd.NA],
+            "basis": [pd.NA],
+            "next_funding_time": [pd.Timestamp("2024-01-01 08:00:00")],
+        }
+    )
+    open_interest = pd.DataFrame(
+        {
+            "date": [dt],
+            "symbol": ["BINANCE_BTCUSDT"],
+            "exchange": ["BINANCE"],
+            "funding_rate": [pd.NA],
+            "open_interest": [1234.5],
+            "mark_price": [pd.NA],
+            "index_price": [41990.0],
+            "basis": [10.0],
+            "next_funding_time": [pd.NA],
+        }
+    )
+
+    merged = collector.merge_meta_frames([funding, open_interest])
+
+    assert len(merged) == 1
+    assert merged.loc[0, "funding_rate"] == 0.0002
+    assert merged.loc[0, "open_interest"] == 1234.5
+    assert merged.loc[0, "mark_price"] == 42000.0
+    assert merged.loc[0, "index_price"] == 41990.0
+    assert merged.loc[0, "basis"] == 10.0
