@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Tuple
 
 
 @dataclass(frozen=True)
@@ -12,6 +13,6 @@ class SymbolRegistry:
         return f"{exchange.upper()}_{symbol.replace('-', '_')}"
 
     @staticmethod
-    def from_qlib_symbol(qlib_symbol: str) -> tuple[str, str]:
+    def from_qlib_symbol(qlib_symbol: str) -> Tuple[str, str]:
         ex, raw = qlib_symbol.split("_", 1)
         return ex.upper(), raw.replace("_", "-") if ex.upper() == "OKX" else raw
