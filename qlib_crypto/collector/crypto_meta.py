@@ -157,6 +157,10 @@ class CryptoMetaCollector:
         valid = [f for f in frames if f is not None and not f.empty]
         if not valid:
             return pd.DataFrame(columns=self.META_COLUMNS)
+        df = pd.concat(valid, ignore_index=True, sort=False).sort_values(["symbol", "date"]) 
+
+        def _last_non_null(s: pd.Series):
+            non_null = s.dropna()
 
         def _last_non_null(series: pd.Series):
             non_null = series.dropna()
