@@ -57,7 +57,7 @@ class IncrementalUpdater:
     def _parse_dates_utc_naive(date_values) -> pd.Series:
         try:
             parsed = pd.to_datetime(date_values, utc=True, format="mixed")
-        except TypeError:
+        except (TypeError, ValueError):
             series = date_values if isinstance(date_values, pd.Series) else pd.Series(date_values)
             parsed = series.map(lambda value: pd.to_datetime(value, utc=True))
         return parsed.dt.tz_localize(None)
