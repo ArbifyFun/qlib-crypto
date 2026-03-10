@@ -163,6 +163,14 @@ class CryptoCollector(BaseCollector):
     def normalize_symbol(self, symbol: str):
         return f"{self.exchange.upper()}_{self._normalize_exchange_symbol(symbol)}"
 
+
+    @staticmethod
+    def _safe_vwap(quote_volume: pd.Series, volume: pd.Series) -> pd.Series:
+        """Compute VWAP while preserving NaN for zero/invalid volume bars."""
+        volume_num = pd.to_numeric(volume, errors="coerce")
+        quote_num = pd.to_numeric(quote_volume, errors="coerce")
+        return quote_num.div(volume_num.where(volume_num != 0, np.nan))
+
     def _to_contract_frame_binance(self, symbol: str, raw_data: list) -> pd.DataFrame:
         if not raw_data:
             return pd.DataFrame(columns=self.DATA_CONTRACT_COLUMNS)

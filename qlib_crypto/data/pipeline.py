@@ -19,6 +19,7 @@ def _infer_exclude_fields(normalize_path: Path) -> str:
         excluded.update(non_numeric)
 
     return ",".join(sorted(excluded))
+NON_NUMERIC_DUMP_FIELDS = "symbol,exchange"
 
 
 def build_and_dump(
@@ -57,7 +58,7 @@ def build_and_dump(
         max_workers=max_workers,
         date_field_name="date",
         symbol_field_name="symbol",
-        exclude_fields=_infer_exclude_fields(normalize_path),
+        exclude_fields=NON_NUMERIC_DUMP_FIELDS,
     ).dump()
 
 
