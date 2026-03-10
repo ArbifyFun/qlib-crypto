@@ -122,6 +122,12 @@ class CryptoCollector(BaseCollector):
     def _normalize_exchange_symbol(self, symbol: str) -> str:
         return symbol.replace("-", "_")
 
+    @staticmethod
+    def _safe_vwap(quote_volume: pd.Series, volume: pd.Series) -> pd.Series:
+        vol = pd.to_numeric(volume, errors="coerce")
+        quote = pd.to_numeric(quote_volume, errors="coerce")
+        return quote.div(vol.where(vol != 0, np.nan))
+
     def get_instrument_list(self) -> List[str]:
         if self.exchange == "binance":
             return self._get_binance_instruments()
@@ -157,6 +163,14 @@ class CryptoCollector(BaseCollector):
     def normalize_symbol(self, symbol: str):
         return f"{self.exchange.upper()}_{self._normalize_exchange_symbol(symbol)}"
 
+
+    @staticmethod
+    def _safe_vwap(quote_volume: pd.Series, volume: pd.Series) -> pd.Series:
+        """Compute VWAP while preserving NaN for zero/invalid volume bars."""
+        volume_num = pd.to_numeric(volume, errors="coerce")
+        quote_num = pd.to_numeric(quote_volume, errors="coerce")
+        return quote_num.div(volume_num.where(volume_num != 0, np.nan))
+
     def _to_contract_frame_binance(self, symbol: str, raw_data: list) -> pd.DataFrame:
         if not raw_data:
             return pd.DataFrame(columns=self.DATA_CONTRACT_COLUMNS)
@@ -185,7 +199,7 @@ class CryptoCollector(BaseCollector):
         df["date"] = pd.to_datetime(df["open_time"], unit="ms", utc=True).dt.tz_convert(None)
         df["money"] = df["quote_volume"]
         df["factor"] = 1.0
-        df["vwap"] = df["quote_volume"].div(df["volume"].replace(0, np.nan))
+        df["vwap"] = self._safe_vwap(df["quote_volume"], df["volume"])
         df["exchange"] = "BINANCE"
         df["symbol"] = symbol
 
@@ -217,7 +231,7 @@ class CryptoCollector(BaseCollector):
         df["date"] = pd.to_datetime(df["open_time"], unit="ms", utc=True).dt.tz_convert(None)
         df["money"] = df["quote_volume"]
         df["factor"] = 1.0
-        df["vwap"] = df["quote_volume"].div(df["volume"].replace(0, np.nan))
+        df["vwap"] = self._safe_vwap(df["quote_volume"], df["volume"])
         df["trade_count"] = pd.NA
         df["exchange"] = "OKX"
         df["symbol"] = symbol

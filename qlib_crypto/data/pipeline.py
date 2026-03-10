@@ -1,9 +1,25 @@
 from pathlib import Path
 
 import fire
+import pandas as pd
 
 from scripts.dump_bin import DumpDataAll
 from qlib_crypto.data.builder import build_qlib_files
+
+
+def _infer_exclude_fields(normalize_path: Path) -> str:
+    """Infer non-numeric fields and always exclude string identifiers."""
+    excluded = {"symbol", "exchange"}
+    for csv_file in sorted(normalize_path.glob("*.csv")):
+        try:
+            sample = pd.read_csv(csv_file, nrows=200)
+        except Exception:
+            continue
+        non_numeric = sample.select_dtypes(exclude=["number", "bool"]).columns
+        excluded.update(non_numeric)
+
+    return ",".join(sorted(excluded))
+NON_NUMERIC_DUMP_FIELDS = "symbol,exchange"
 
 
 def build_and_dump(
@@ -42,7 +58,7 @@ def build_and_dump(
         max_workers=max_workers,
         date_field_name="date",
         symbol_field_name="symbol",
-        exclude_fields="symbol,exchange",
+        exclude_fields=NON_NUMERIC_DUMP_FIELDS,
     ).dump()
 
 
