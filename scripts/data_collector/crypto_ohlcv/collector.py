@@ -122,6 +122,12 @@ class CryptoCollector(BaseCollector):
     def _normalize_exchange_symbol(self, symbol: str) -> str:
         return symbol.replace("-", "_")
 
+    @staticmethod
+    def _safe_vwap(quote_volume: pd.Series, volume: pd.Series) -> pd.Series:
+        vol = pd.to_numeric(volume, errors="coerce")
+        quote = pd.to_numeric(quote_volume, errors="coerce")
+        return quote.div(vol.where(vol != 0, np.nan))
+
     def get_instrument_list(self) -> List[str]:
         if self.exchange == "binance":
             return self._get_binance_instruments()
