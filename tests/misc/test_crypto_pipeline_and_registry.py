@@ -33,6 +33,13 @@ def test_pipeline_invokes_builder_and_dump(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(pipeline_mod, "build_qlib_files", fake_builder)
     monkeypatch.setattr(pipeline_mod, "DumpDataAll", FakeDump)
 
+    (tmp_path / "norm").mkdir(parents=True)
+    (tmp_path / "norm" / "BINANCE_BTCUSDT.csv").write_text(
+        "date,symbol,exchange,open,market_type\n"
+        "2024-01-01,BINANCE_BTCUSDT,BINANCE,1.0,spot\n",
+        encoding="utf-8",
+    )
+
     pipeline_mod.build_and_dump(
         normalize_dir=str(tmp_path / "norm"),
         qlib_dir=str(tmp_path / "qlib"),
@@ -41,4 +48,4 @@ def test_pipeline_invokes_builder_and_dump(monkeypatch, tmp_path: Path):
 
     assert calls["builder"] == 1
     assert calls["dump"] == 1
-    assert calls["dump_kwargs"]["exclude_fields"] == "symbol,exchange"
+    assert calls["dump_kwargs"]["exclude_fields"] == "date,exchange,market_type,symbol"
