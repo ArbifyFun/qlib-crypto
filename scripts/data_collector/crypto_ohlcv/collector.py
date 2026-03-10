@@ -4,6 +4,7 @@ from abc import ABC
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+import numpy as np
 import fire
 import pandas as pd
 from loguru import logger
@@ -184,7 +185,7 @@ class CryptoCollector(BaseCollector):
         df["date"] = pd.to_datetime(df["open_time"], unit="ms", utc=True).dt.tz_convert(None)
         df["money"] = df["quote_volume"]
         df["factor"] = 1.0
-        df["vwap"] = (df["quote_volume"] / df["volume"].replace(0, pd.NA)).astype(float)
+        df["vwap"] = df["quote_volume"].div(df["volume"].replace(0, np.nan))
         df["exchange"] = "BINANCE"
         df["symbol"] = symbol
 
@@ -216,7 +217,7 @@ class CryptoCollector(BaseCollector):
         df["date"] = pd.to_datetime(df["open_time"], unit="ms", utc=True).dt.tz_convert(None)
         df["money"] = df["quote_volume"]
         df["factor"] = 1.0
-        df["vwap"] = (df["quote_volume"] / df["volume"].replace(0, pd.NA)).astype(float)
+        df["vwap"] = df["quote_volume"].div(df["volume"].replace(0, np.nan))
         df["trade_count"] = pd.NA
         df["exchange"] = "OKX"
         df["symbol"] = symbol

@@ -42,6 +42,7 @@ def build_and_dump(
         max_workers=max_workers,
         date_field_name="date",
         symbol_field_name="symbol",
+        exclude_fields="symbol,exchange",
     ).dump()
 
 
