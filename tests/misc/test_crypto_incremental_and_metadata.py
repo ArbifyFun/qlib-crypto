@@ -171,3 +171,54 @@ def test_incremental_update_tz_aware_csv_dates(monkeypatch, tmp_path: Path):
     n = updater.update(end="2024-01-03")
     assert n == 1
 
+
+
+def test_incremental_update_parses_mixed_date_formats_without_pandas2_mode(monkeypatch, tmp_path: Path):
+    src = tmp_path / "source"
+    src.mkdir(parents=True)
+    fp = src / "binance_btcusdt.csv"
+    pd.DataFrame(
+        {
+            "date": ["2024-01-01"],
+            "symbol": ["BINANCE_BTCUSDT"],
+            "open": [1],
+            "high": [1],
+            "low": [1],
+            "close": [1],
+            "volume": [1],
+            "money": [1],
+            "factor": [1],
+            "vwap": [1],
+            "trade_count": [1],
+            "exchange": ["BINANCE"],
+        }
+    ).to_csv(fp, index=False)
+
+    updater = IncrementalUpdater(str(src), exchange="binance", interval="1d")
+
+    class DummyCollector:
+        def get_data(self, symbol, interval, start, end):
+            return pd.DataFrame(
+                {
+                    "date": ["2024-01-02T00:00:00Z"],
+                    "open": [2],
+                    "high": [2],
+                    "low": [2],
+                    "close": [2],
+                    "volume": [2],
+                    "money": [4],
+                    "factor": [1],
+                    "vwap": [2],
+                    "trade_count": [2],
+                    "exchange": ["BINANCE"],
+                    "symbol": [symbol],
+                }
+            )
+
+    monkeypatch.setattr(updater, "_new_collector", lambda: DummyCollector())
+
+    n = updater.update(end="2024-01-03")
+    assert n == 1
+    out = pd.read_csv(fp)
+    assert len(out) == 2
+    assert out["date"].astype(str).tolist() == ["2024-01-01", "2024-01-02"]
