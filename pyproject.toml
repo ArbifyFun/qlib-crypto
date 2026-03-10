@@ -112,10 +112,10 @@ client = [
 # InvalidDistribution: Invalid distribution metadata: unrecognized or malformed field 'license-file'
 # To solve this problem, we added license-files here. Refs: https://github.com/pypa/twine/issues/1216
 [tool.setuptools]
-packages = [
-  "qlib",
-]
 license-files = []
+
+[tool.setuptools.packages.find]
+include = ["qlib", "qlib.*", "qlib_crypto", "qlib_crypto.*", "scripts"]
 
 [project.scripts]
 qrun = "qlib.cli.run:run"
