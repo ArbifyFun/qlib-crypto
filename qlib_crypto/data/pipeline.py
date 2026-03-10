@@ -6,6 +6,9 @@ from scripts.dump_bin import DumpDataAll
 from qlib_crypto.data.builder import build_qlib_files
 
 
+NON_NUMERIC_DUMP_FIELDS = "symbol,exchange"
+
+
 def build_and_dump(
     normalize_dir: str,
     qlib_dir: str,
@@ -42,7 +45,7 @@ def build_and_dump(
         max_workers=max_workers,
         date_field_name="date",
         symbol_field_name="symbol",
-        exclude_fields="symbol,exchange",
+        exclude_fields=NON_NUMERIC_DUMP_FIELDS,
     ).dump()
 
 
