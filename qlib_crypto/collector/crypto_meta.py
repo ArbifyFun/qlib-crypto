@@ -157,10 +157,19 @@ class CryptoMetaCollector:
         valid = [f for f in frames if f is not None and not f.empty]
         if not valid:
             return pd.DataFrame(columns=self.META_COLUMNS)
+
+        def _last_non_null(series: pd.Series):
+            non_null = series.dropna()
+            if non_null.empty:
+                return pd.NA
+            return non_null.iloc[-1]
+
         df = pd.concat(valid, ignore_index=True, sort=False)
         df = df.sort_values(["symbol", "date"])
 
         def _last_valid(series: pd.Series):
+
+        def _last_non_null(series: pd.Series):
             non_null = series.dropna()
             if non_null.empty:
                 return pd.NA
@@ -172,3 +181,9 @@ class CryptoMetaCollector:
             .sort_values(["symbol", "date", "exchange"])
         )
         return merged[self.META_COLUMNS]
+        df = (
+            df.sort_values(["symbol", "date"])
+            .groupby(["symbol", "date"], as_index=False, sort=False)
+            .agg(_last_non_null)
+        )
+        return df[self.META_COLUMNS]
