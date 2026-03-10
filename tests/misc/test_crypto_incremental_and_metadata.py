@@ -171,3 +171,19 @@ def test_incremental_update_tz_aware_csv_dates(monkeypatch, tmp_path: Path):
     n = updater.update(end="2024-01-03")
     assert n == 1
 
+
+
+def test_parse_dates_utc_naive_falls_back_when_mixed_unsupported(monkeypatch):
+    original_to_datetime = pd.to_datetime
+
+    def fake_to_datetime(*args, **kwargs):
+        if kwargs.get("format") == "mixed":
+            raise TypeError("format='mixed' is not supported")
+        return original_to_datetime(*args, **kwargs)
+
+    monkeypatch.setattr("qlib_crypto.collector.incremental.pd.to_datetime", fake_to_datetime)
+
+    parsed = IncrementalUpdater._parse_dates_utc_naive(["2024-01-01", "2024-01-02T00:00:00+00:00"])
+    assert str(parsed.dtype) == "datetime64[ns]"
+    assert parsed.iloc[0] == pd.Timestamp("2024-01-01")
+    assert parsed.iloc[1] == pd.Timestamp("2024-01-02")

@@ -53,6 +53,15 @@ class IncrementalUpdater:
             return ts.tz_convert("UTC").tz_localize(None)
         return ts
 
+    @staticmethod
+    def _parse_dates_utc_naive(date_values) -> pd.Series:
+        try:
+            parsed = pd.to_datetime(date_values, utc=True, format="mixed")
+        except TypeError:
+            series = date_values if isinstance(date_values, pd.Series) else pd.Series(date_values)
+            parsed = series.map(lambda value: pd.to_datetime(value, utc=True))
+        return parsed.dt.tz_localize(None)
+
     def update(self, end: Optional[str] = None, limit_nums: Optional[int] = None):
         files = sorted(self.source_dir.glob("*.csv"))
         if limit_nums is not None:
@@ -81,7 +90,7 @@ class IncrementalUpdater:
             new_df = new_df.copy()
             new_df["symbol"] = qlib_symbol
             merged = pd.concat([old_df, new_df], sort=False, ignore_index=True)
-            merged["date"] = pd.to_datetime(merged["date"], utc=True, format="mixed").dt.tz_localize(None)
+            merged["date"] = self._parse_dates_utc_naive(merged["date"])
             merged = merged.drop_duplicates(subset=["date"], keep="last").sort_values("date")
             merged.to_csv(fp, index=False)
             updated += 1
