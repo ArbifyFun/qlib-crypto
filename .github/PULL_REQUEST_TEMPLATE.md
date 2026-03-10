@@ -2,6 +2,9 @@
 <!--- please make sure your Pull Request meets the following requirements: -->
 <!---   1. Provide a general summary of your changes in the Title above; -->
 <!---   2. Add appropriate prefixes to titles, such as `build:`, `chore:`, `ci:`, `docs:`, `feat:`, `fix:`, `perf:`, `refactor:`, `revert:`, `style:`, `test:`(Ref: https://www.conventionalcommits.org/). -->
+<!---   3. pull request title is checked by commitlint; use the format `<type>: <subject>` (e.g., `fix: align timestamp timezones`). -->
+<!---      avoid `Fix ...` without a type prefix; use `fix: ...` instead. -->
+<!---      quick examples: `fix: align incremental updater timezone handling`, `docs: update release notes`. -->
 <!--- Category: -->
 <!--- Patch Updates: `fix:` -->
 <!---   Example: fix(auth): correct login validation issue -->
