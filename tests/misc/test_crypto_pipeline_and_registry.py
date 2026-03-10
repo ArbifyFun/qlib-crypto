@@ -17,6 +17,12 @@ def test_symbol_registry_roundtrip():
     assert raw == "BTC-USDT-SWAP"
 
 
+def test_symbol_registry_return_annotation_is_deferred_string():
+    # Guard Python 3.8 compatibility: with postponed evaluation enabled,
+    # built-in generic annotations are stored as strings instead of evaluated.
+    assert SymbolRegistry.from_qlib_symbol.__annotations__["return"] == "tuple[str, str]"
+
+
 def test_pipeline_invokes_builder_and_dump(monkeypatch, tmp_path: Path):
     calls = {"builder": 0, "dump": 0, "dump_kwargs": None}
 
